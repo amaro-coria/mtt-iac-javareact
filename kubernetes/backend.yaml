@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: widgets-api
+  namespace: widgets
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: widgets-api
+  template:
+    metadata:
+      labels:
+        app: widgets-api
+    spec:
+      containers:
+      - name: widgets-api
+        image: amarocoria/java-interview-api:latest
+        ports:
+        - containerPort: 9000
+        env:
+        - name: DB_URL
+          valueFrom:
+            secretKeyRef:
+              name: db-credentials
+              key: url
+        - name: DB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: db-credentials
+              key: username
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-credentials
+              key: password
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 9000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: widgets-api
+  namespace: widgets
+spec:
+  selector:
+    app: widgets-api
+  ports:
+  - port: 9000
+    targetPort: 9000
+  type: ClusterIP

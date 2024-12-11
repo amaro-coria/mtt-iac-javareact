@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: widgets-ingress
+  namespace: widgets
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /v1/(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: widgets-api
+            port:
+              number: 9000
+      - path: /(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: widgets-frontend
+            port:
+              number: 80

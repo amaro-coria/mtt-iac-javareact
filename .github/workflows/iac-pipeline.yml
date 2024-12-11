@@ -1,0 +1,116 @@
+name: Infrastructure Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+        - production
+        - staging
+      destroy:
+        description: 'Destroy infrastructure?'
+        required: true
+        default: false
+        type: boolean
+
+jobs:
+  deploy-infrastructure:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5.0"
+
+      - name: Terraform Init
+        working-directory: ./terraform
+        run: terraform init
+        env:
+          TF_WORKSPACE: ${{ github.event.inputs.environment }}
+
+      - name: Terraform Plan
+        if: github.event.inputs.destroy == false
+        working-directory: ./terraform
+        run: terraform plan
+        env:
+          TF_VAR_db_username: ${{ secrets.DB_USERNAME }}
+          TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
+
+      - name: Terraform Apply
+        if: github.event.inputs.destroy == false
+        working-directory: ./terraform
+        run: terraform apply -auto-approve
+        env:
+          TF_VAR_db_username: ${{ secrets.DB_USERNAME }}
+          TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
+
+      - name: Terraform Destroy
+        if: github.event.inputs.destroy == true
+        working-directory: ./terraform
+        run: terraform destroy -auto-approve
+        env:
+          TF_VAR_db_username: ${{ secrets.DB_USERNAME }}
+          TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
+
+      - name: Setup kubectl
+        if: github.event.inputs.destroy == false
+        uses: azure/setup-kubectl@v3
+
+      - name: Update kubeconfig
+        if: github.event.inputs.destroy == false
+        run: |
+          aws eks update-kubeconfig --region us-west-2 --name widgets-cluster-${{ github.event.inputs.environment }}
+
+      - name: Install Helm
+        if: github.event.inputs.destroy == false
+        uses: azure/setup-helm@v3
+
+      - name: Setup NGINX Ingress Controller
+        if: github.event.inputs.destroy == false
+        run: |
+          helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+          helm repo update
+          helm upgrade --install nginx-ingress ingress-nginx/ingress-nginx \
+            --namespace ingress-nginx --create-namespace
+
+      - name: Create Kubernetes Secrets
+        if: github.event.inputs.destroy == false
+        run: |
+          kubectl create namespace widgets --dry-run=client -o yaml | kubectl apply -f -
+          
+          # Get DB credentials from Terraform output
+          DB_ENDPOINT=$(terraform -chdir=./terraform output -raw rds_endpoint)
+          
+          kubectl -n widgets create secret generic db-credentials \
+            --from-literal=url=jdbc:postgresql://${DB_ENDPOINT}/widgetdb \
+            --from-literal=username=${{ secrets.DB_USERNAME }} \
+            --from-literal=password=${{ secrets.DB_PASSWORD }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy Kubernetes Resources
+        if: github.event.inputs.destroy == false
+        run: |
+          kubectl apply -f kubernetes/
+
+      - name: Get Service URL
+        if: github.event.inputs.destroy == false
+        run: |
+          echo "Waiting for LoadBalancer to be ready..."
+          kubectl -n widgets wait --for=condition=ready ingress/widgets-ingress --timeout=300s
+          echo "Service URL:"
+          kubectl -n widgets get ingress widgets-ingress -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
