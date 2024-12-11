@@ -50,7 +50,15 @@ jobs:
           TF_WORKSPACE: ${{ github.event.inputs.environment }}
 
       - name: Terraform Format
-        run: terraform fmt -check
+        run: terraform fmt
+
+      - name: Commit Terraform Format Changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add .
+          git diff-index --quiet HEAD || git commit -m "Auto-format Terraform files"
+          git push
 
       - name: Terraform Plan
         if: github.event.inputs.destroy == false

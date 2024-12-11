@@ -24,7 +24,7 @@ provider "aws" {
 }
 
 module "vpc" {
-  source = "terraform-aws-modules/vpc/aws"
+  source  = "terraform-aws-modules/vpc/aws"
   version = "5.0.0"
 
   name = "${var.project_name}-vpc"
@@ -34,17 +34,16 @@ module "vpc" {
   private_subnets = ["10.0.1.0/24", "10.0.2.0/24"]
   public_subnets  = ["10.0.101.0/24", "10.0.102.0/24"]
 
-  enable_nat_gateway = true
-  single_nat_gateway = true
-  
-  enable_dns_hostnames = true
-  enable_dns_support   = true
+  enable_nat_gateway     = true
+  single_nat_gateway     = true
+  enable_dns_hostnames   = true
+  enable_dns_support     = true
 
   tags = local.common_tags
 }
 
 module "eks" {
-  source = "terraform-aws-modules/eks/aws"
+  source  = "terraform-aws-modules/eks/aws"
   version = "19.0.0"
 
   cluster_name    = "${var.project_name}-cluster-${var.environment}"
@@ -55,16 +54,16 @@ module "eks" {
 
   eks_managed_node_groups = {
     general = {
-      desired_size = var.eks_desired_size
-      min_size     = var.eks_min_size
-      max_size     = var.eks_max_size
-
+      desired_size   = var.eks_desired_size
+      min_size       = var.eks_min_size
+      max_size       = var.eks_max_size
       instance_types = ["t3.medium"]
     }
   }
 
   tags = local.common_tags
 }
+
 
 module "rds" {
   source = "terraform-aws-modules/rds/aws"
