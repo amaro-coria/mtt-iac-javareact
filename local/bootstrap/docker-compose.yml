@@ -1,0 +1,52 @@
+version: '3.8'
+
+networks:
+  widget-network:
+    name: widget-network
+
+services:
+  app:
+    build:
+      context: ./java-interview-api
+      dockerfile: Dockerfile
+    container_name: widgets-api
+    ports:
+      - "9000:9000"
+    environment:
+      - DB_URL=jdbc:postgresql://db:5432/widgetdb
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=postgres
+    depends_on:
+      - db
+    networks:
+      - widget-network
+
+  db:
+    image: postgres:15
+    container_name: postgres-db
+    restart: always
+    environment:
+      POSTGRES_DB: widgetdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - widget-network
+
+  frontend:
+    build:
+      context: ./react-interview-ui
+      dockerfile: Dockerfile
+    container_name: widgets-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - app
+    networks:
+      - widget-network
+
+volumes:
+  postgres-data:
