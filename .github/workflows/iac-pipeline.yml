@@ -39,7 +39,10 @@ jobs:
 
       - name: Terraform Init
         working-directory: ./terraform
-        run: terraform init
+        run: |
+          terraform init -backend-config="bucket=widgets-terraform-state-amarocoria" \
+            -backend-config="region=us-west-2" \
+            -backend-config="dynamodb_table=widgets-terraform-locks"
         env:
           TF_WORKSPACE: ${{ github.event.inputs.environment }}
 
