@@ -34,10 +34,10 @@ module "vpc" {
   private_subnets = ["10.0.1.0/24", "10.0.2.0/24"]
   public_subnets  = ["10.0.101.0/24", "10.0.102.0/24"]
 
-  enable_nat_gateway     = true
-  single_nat_gateway     = true
-  enable_dns_hostnames   = true
-  enable_dns_support     = true
+  enable_nat_gateway   = true
+  single_nat_gateway   = true
+  enable_dns_hostnames = true
+  enable_dns_support   = true
 
   tags = local.common_tags
 }
@@ -66,16 +66,16 @@ module "eks" {
 
 
 module "rds" {
-  source = "terraform-aws-modules/rds/aws"
+  source  = "terraform-aws-modules/rds/aws"
   version = "6.0.0"
 
   identifier = "${var.project_name}-db-${var.environment}"
 
   engine               = "postgres"
   engine_version       = "15.3"
-  family              = "postgres15"
+  family               = "postgres15"
   major_engine_version = "15"
-  instance_class      = var.db_instance_class
+  instance_class       = var.db_instance_class
 
   allocated_storage = 20
 
