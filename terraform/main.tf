@@ -9,14 +9,6 @@ terraform {
       version = "~> 2.0"
     }
   }
-
-  backend "s3" {
-    bucket         = "widgets-terraform-state-amarocoria"
-    key            = "state/terraform.tfstate"
-    region         = "us-west-2"
-    dynamodb_table = "widgets-terraform-locks"
-    encrypt        = true
-  }
 }
 
 provider "aws" {
@@ -60,13 +52,24 @@ module "eks" {
       instance_types = ["t3.medium"]
     }
   }
-  
-  create_cluster_security_group = true
-  create_node_security_group   = true
 
   tags = local.common_tags
 }
 
+resource "aws_security_group" "rds" {
+  name        = "${var.project_name}-rds-sg-${var.environment}"
+  description = "Security group for RDS instance"
+  vpc_id      = module.vpc.vpc_id
+
+  ingress {
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = [module.eks.cluster_security_group_id]
+  }
+
+  tags = local.common_tags
+}
 
 module "rds" {
   source  = "terraform-aws-modules/rds/aws"
@@ -76,9 +79,9 @@ module "rds" {
 
   engine               = "postgres"
   engine_version       = "15.10"
-  family               = "postgres15"
+  family              = "postgres15"
   major_engine_version = "15"
-  instance_class       = var.db_instance_class
+  instance_class      = var.db_instance_class
 
   allocated_storage = 20
 
@@ -94,21 +97,6 @@ module "rds" {
   backup_window      = "03:00-06:00"
 
   backup_retention_period = 7
-
-  tags = local.common_tags
-}
-
-resource "aws_security_group" "rds" {
-  name        = "${var.project_name}-rds-sg-${var.environment}"
-  description = "Security group for Widgets RDS instance"
-  vpc_id      = module.vpc.vpc_id
-
-  ingress {
-    from_port       = 5432
-    to_port         = 5432
-    protocol        = "tcp"
-    security_groups = [module.eks.cluster_security_group_id]
-  }
 
   tags = local.common_tags
 }

@@ -1,6 +1,6 @@
-output "rds_endpoint" {
-  description = "RDS instance endpoint"
-  value       = module.rds.db_instance_endpoint
+output "vpc_id" {
+  description = "The ID of the VPC"
+  value       = module.vpc.vpc_id
 }
 
 output "eks_cluster_endpoint" {
@@ -9,11 +9,16 @@ output "eks_cluster_endpoint" {
 }
 
 output "eks_cluster_name" {
-  description = "EKS cluster name"
+  description = "The name of the EKS cluster"
   value       = module.eks.cluster_name
 }
 
-output "vpc_id" {
-  description = "VPC ID"
-  value       = module.vpc.vpc_id
+output "rds_endpoint" {
+  description = "The connection endpoint for the RDS instance"
+  value       = module.rds.db_instance_endpoint
+}
+
+output "rds_port" {
+  description = "The port the RDS instance is listening on"
+  value       = module.rds.db_instance_port
 }
