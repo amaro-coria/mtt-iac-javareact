@@ -18,50 +18,25 @@ resource "aws_iam_policy" "github_actions" {
       {
         Effect = "Allow"
         Action = [
-          "s3:ListBucket",
-          "s3:GetObject",
-          "s3:PutObject",
-          "s3:DeleteObject"
-        ]
-        Resource = [
-          "arn:aws:s3:::widgets-terraform-state-amarocoria",
-          "arn:aws:s3:::widgets-terraform-state-amarocoria/*"
-        ]
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "dynamodb:GetItem",
-          "dynamodb:PutItem",
-          "dynamodb:DeleteItem"
-        ]
-        Resource = "arn:aws:dynamodb:us-west-2:*:table/widgets-terraform-locks"
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "ec2:*",
-          "eks:*",
-          "rds:*",
-          "logs:*",
+          "s3:*",
+          "dynamodb:*",
           "kms:*",
-          "iam:GetRole",
-          "iam:GetRolePolicy",
-          "iam:ListRolePolicies",
-          "iam:ListAttachedRolePolicies",
-          "iam:PassRole"
+          "logs:*",
+          "eks:*",
+          "ec2:*",
+          "rds:*",
+          "iam:*",
+          "cloudwatch:*",
+          "iam:CreateServiceLinkedRole"
         ]
         Resource = "*"
       },
       {
         Effect = "Allow"
         Action = [
-          "cloudwatch:PutMetricData",
-          "cloudwatch:GetMetricData",
-          "cloudwatch:GetMetricStatistics",
-          "cloudwatch:ListMetrics"
+          "iam:CreateServiceLinkedRole"
         ]
-        Resource = "*"
+        Resource = "arn:aws:iam::*:role/aws-service-role/*"
       }
     ]
   })
@@ -88,15 +63,6 @@ output "github_actions_access_key" {
 output "github_actions_secret_key" {
   value     = aws_iam_access_key.github_actions.secret
   sensitive = true
-}
-
-# S3 bucket for Terraform state
-resource "aws_s3_bucket" "terraform_state" {
-  bucket = "widgets-terraform-state-amarocoria"
-
-  lifecycle {
-    prevent_destroy = true
-  }
 }
 
 # Enable versioning for state bucket

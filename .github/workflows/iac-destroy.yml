@@ -1,0 +1,61 @@
+# .github/workflows/infrastructure-destroy.yml
+
+name: Destroy Infrastructure
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to destroy'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+        - production
+        - staging
+      confirm_destroy:
+        description: 'Type "DESTROY" to confirm'
+        required: true
+        type: string
+
+jobs:
+  destroy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    defaults:
+      run:
+        working-directory: ./terraform
+
+    if: github.event.inputs.confirm_destroy == 'DESTROY'
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5.0"
+
+      - name: Terraform Init
+        run: |
+          terraform init \
+            -backend-config="bucket=widgets-terraform-state-amarocoria" \
+            -backend-config="region=us-west-2" \
+            -backend-config="dynamodb_table=widgets-terraform-locks"
+
+      - name: Terraform Plan Destroy
+        run: terraform plan -destroy -out=tfplan
+        env:
+          TF_VAR_environment: ${{ github.event.inputs.environment }}
+          TF_VAR_db_username: ${{ secrets.DB_USERNAME }}
+          TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
+
+      - name: Terraform Destroy
+        run: terraform apply tfplan
