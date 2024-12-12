@@ -27,6 +27,7 @@ resource "aws_iam_policy" "github_actions" {
           "rds:*",
           "iam:*",
           "cloudwatch:*",
+          "secretsmanager:*",
           "iam:CreateServiceLinkedRole"
         ]
         Resource = "*"
@@ -63,6 +64,15 @@ output "github_actions_access_key" {
 output "github_actions_secret_key" {
   value     = aws_iam_access_key.github_actions.secret
   sensitive = true
+}
+
+# S3 bucket for Terraform state
+resource "aws_s3_bucket" "terraform_state" {
+  bucket = "widgets-terraform-state-amarocoria"
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 # Enable versioning for state bucket

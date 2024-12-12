@@ -60,6 +60,9 @@ module "eks" {
       instance_types = ["t3.medium"]
     }
   }
+  
+  create_cluster_security_group = true
+  create_node_security_group   = true
 
   tags = local.common_tags
 }
